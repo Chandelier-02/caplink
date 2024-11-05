@@ -570,9 +570,17 @@ function createProxy<T>(
       if (prop === Symbol.asyncDispose) {
         return async () => {
           isProxyReleased = true;
-          proxyCache.delete(path.join(","));
-          unregisterProxy(proxy);
-          await releaseEndpoint(ep);
+          if ([...path, prop].length === 0) {
+            for (const [path, proxy] of proxyCache) {
+              proxyCache.delete(path);
+              unregisterProxy(proxy);
+            }
+            await releaseEndpoint(ep);
+          } else {
+            proxyCache.delete(path.join(","));
+            unregisterProxy(proxy);
+            await releaseEndpoint(ep);
+          }
         };
       }
       throwIfProxyReleased(isProxyReleased);
