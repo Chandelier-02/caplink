@@ -512,6 +512,11 @@ async function releaseEndpoint(ep: Endpoint, force = false) {
         )
       );
       resolvers.clear();
+
+      for (const proxy of proxyCache.values()) {
+        unregisterProxy(proxy);
+      }
+
       proxyCache.clear();
       ep.removeEventListener("message", messageHandler);
 
