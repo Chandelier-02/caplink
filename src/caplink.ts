@@ -513,11 +513,6 @@ async function releaseEndpoint(ep: Endpoint, force = false) {
       );
       resolvers.clear();
 
-      for (const proxy of proxyCache.values()) {
-        unregisterProxy(proxy);
-      }
-
-      proxyCache.clear();
       ep.removeEventListener("message", messageHandler);
 
       closeEndpoint(ep);
@@ -688,6 +683,17 @@ function createProxy<T>(
     // This shouldn't really happen since the proxy must be closed from this side, either through manual dispose or finalization registry.
     // Also note that support for the `close` event is unclear (MDN doesn't document it, spec says it should be there...), so this is a last resort.
     ep.addEventListener("close", async (ev) => {
+      //@ts-ignore
+      isProxyReleased = ev.reason ?? "closed";
+      for (const [path, proxy] of proxyCache.entries()) {
+        unregisterProxy(proxy);
+        proxyCache.delete(path);
+      }
+      // Passing the force flag to skip sending a release message, since the endpoint is already closed.
+      await releaseEndpoint(ep, true);
+    });
+
+    ep.addEventListener("exit", async (ev) => {
       //@ts-ignore
       isProxyReleased = ev.reason ?? "closed";
       for (const [path, proxy] of proxyCache.entries()) {
