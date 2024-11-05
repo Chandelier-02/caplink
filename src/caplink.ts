@@ -546,6 +546,14 @@ function unregisterProxy(proxy: object) {
 
 const proxyCache = new Map<string, Proxy>();
 
+export async function teardown(ep: Endpoint): Promise<void> {
+  for (const proxy of proxyCache) {
+    unregisterProxy(proxy);
+  }
+  proxyCache.clear();
+  await releaseEndpoint(ep, true);
+}
+
 function createProxy<T>(
   ep: Endpoint,
   path: PropertyKey[] = [],
@@ -570,17 +578,9 @@ function createProxy<T>(
       if (prop === Symbol.asyncDispose) {
         return async () => {
           isProxyReleased = true;
-          if ([...path, prop].length === 0) {
-            for (const [path, proxy] of proxyCache) {
-              proxyCache.delete(path);
-              unregisterProxy(proxy);
-            }
-            await releaseEndpoint(ep);
-          } else {
-            proxyCache.delete(path.join(","));
-            unregisterProxy(proxy);
-            await releaseEndpoint(ep);
-          }
+          proxyCache.delete(path.join(","));
+          unregisterProxy(proxy);
+          await releaseEndpoint(ep);
         };
       }
       throwIfProxyReleased(isProxyReleased);
@@ -693,34 +693,14 @@ function createProxy<T>(
     ep.addEventListener("close", async (ev) => {
       //@ts-ignore
       isProxyReleased = ev.reason ?? "closed";
-      for (const [path, proxy] of proxyCache.entries()) {
-        unregisterProxy(proxy);
-        proxyCache.delete(path);
-      }
-      // Passing the force flag to skip sending a release message, since the endpoint is already closed.
-      await releaseEndpoint(ep, true);
-    });
-
-    ep.addEventListener("exit", async (ev) => {
-      //@ts-ignore
-      isProxyReleased = ev.reason ?? "closed";
-      for (const [path, proxy] of proxyCache.entries()) {
-        unregisterProxy(proxy);
-        proxyCache.delete(path);
-      }
-      // Passing the force flag to skip sending a release message, since the endpoint is already closed.
-      await releaseEndpoint(ep, true);
+      await teardown(ep);
     });
 
     // Similarly, if the endpoint errors for any reason, we should mark the proxy as released and reject all pending promises.
     ep.addEventListener("error", async (ev) => {
       //@ts-ignore
       isProxyReleased = ev.error instanceof Error ? ev.error : "errored";
-      for (const [path, proxy] of proxyCache.entries()) {
-        unregisterProxy(proxy);
-        proxyCache.delete(path);
-      }
-      await releaseEndpoint(ep, true);
+      await teardown(ep);
     });
   }
 

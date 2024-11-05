@@ -155,6 +155,7 @@ export interface TransferHandler<T extends object | Function, S> {
 export declare const transferHandlers: Map<string, TransferHandler<object | Function, unknown>>;
 export declare function expose(object: object, ep?: Endpoint, allowedOrigins?: (string | RegExp)[]): void;
 export declare function wrap<T>(ep: Endpoint, target?: any): Remote<T>;
+export declare function teardown(ep: Endpoint): Promise<void>;
 export declare function transfer<T>(obj: T, transfers: Transferable[]): T;
 export declare function proxy<T extends {}>(obj: T): T & ProxyMarked;
 export declare function windowEndpoint(w: PostMessageWithOrigin, context?: MessageEventTarget, targetOrigin?: string): Endpoint;

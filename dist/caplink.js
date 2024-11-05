@@ -280,6 +280,13 @@ function unregisterProxy(proxy) {
     proxyFinalizers?.unregister(proxy);
 }
 const proxyCache = new Map();
+export async function teardown(ep) {
+    for (const proxy of proxyCache) {
+        unregisterProxy(proxy);
+    }
+    proxyCache.clear();
+    await releaseEndpoint(ep, true);
+}
 function createProxy(ep, path = [], target = function () { }) {
     const cachedProxy = proxyCache.get(path.join(","));
     if (cachedProxy) {
@@ -394,22 +401,13 @@ function createProxy(ep, path = [], target = function () { }) {
         ep.addEventListener("close", async (ev) => {
             //@ts-ignore
             isProxyReleased = ev.reason ?? "closed";
-            for (const [path, proxy] of proxyCache.entries()) {
-                unregisterProxy(proxy);
-                proxyCache.delete(path);
-            }
-            // Passing the force flag to skip sending a release message, since the endpoint is already closed.
-            await releaseEndpoint(ep, true);
+            await teardown(ep);
         });
         // Similarly, if the endpoint errors for any reason, we should mark the proxy as released and reject all pending promises.
         ep.addEventListener("error", async (ev) => {
             //@ts-ignore
             isProxyReleased = ev.error instanceof Error ? ev.error : "errored";
-            for (const [path, proxy] of proxyCache.entries()) {
-                unregisterProxy(proxy);
-                proxyCache.delete(path);
-            }
-            await releaseEndpoint(ep, true);
+            await teardown(ep);
         });
     }
     registerProxy(proxy, ep);
