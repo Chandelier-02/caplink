@@ -4,14 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TypedEventTarget } from "@workers/typed-event-target";
+import type { TypedEventTarget } from "typed-event-target";
 
-export type MessageEventTargetEventMap = MessagePortEventMap & { error: ErrorEvent, close: CloseEvent };
-export type MessageEventTarget = Pick<TypedEventTarget<MessageEventTargetEventMap>, "addEventListener"|"removeEventListener">;
+export interface MessageEventTargetEventMap
+  extends Readonly<Event>,
+    MessagePortEventMap {
+  error: ErrorEvent;
+  close: CloseEvent;
+}
 
-export const messageChannel = Symbol('Caplink.messageChannel');
-export const adoptNative = Symbol('Caplink.adaptNative');
-export const toNative = Symbol('Caplink.toNative');
+export type MessageEventTarget = Pick<
+  TypedEventTarget<MessageEventTargetEventMap>,
+  "addEventListener" | "removeEventListener"
+>;
+
+export const messageChannel = Symbol("Caplink.messageChannel");
+export const adoptNative = Symbol("Caplink.adaptNative");
+export const toNative = Symbol("Caplink.toNative");
 
 export interface PostMessageWithOrigin {
   postMessage(
@@ -22,7 +31,10 @@ export interface PostMessageWithOrigin {
 }
 
 export interface Endpoint extends MessageEventTarget {
-  postMessage(message: any, transfer?: Transferable[]|StructuredSerializeOptions): void;
+  postMessage(
+    message: any,
+    transfer?: Transferable[] | StructuredSerializeOptions
+  ): void;
   start?: () => void;
   [messageChannel]?: typeof MessageChannel;
   [adoptNative]?: (port: MessagePort) => MessagePort;
@@ -36,8 +48,7 @@ export const enum WireValueType {
   HANDLER = "HANDLER",
 }
 
-
-export type MessageId = string|number;
+export type MessageId = string | number;
 
 export interface RawWireValue {
   id?: MessageId;

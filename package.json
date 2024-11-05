@@ -1,0 +1,16 @@
+{
+  "name": "@workers/caplink",
+  "version": "0.0.5",
+  "type": "module",
+  "exports": {
+    ".": "./dist/caplink.js",
+    "./node-adapter": "./dist/node-adapter.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "typed-event-target": "^4.0.0",
+    "typescript": "^5.6.3"
+  }
+}
