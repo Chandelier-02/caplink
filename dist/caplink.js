@@ -279,18 +279,30 @@ function registerProxy(proxy, ep) {
 function unregisterProxy(proxy) {
     proxyFinalizers?.unregister(proxy);
 }
-const proxyCache = new Map();
+const proxyCaches = new Map();
 export async function teardown(ep) {
+    const proxyCache = proxyCaches.get(ep);
+    if (!proxyCache) {
+        return;
+    }
     for (const proxy of proxyCache) {
         unregisterProxy(proxy);
     }
     proxyCache.clear();
     await releaseEndpoint(ep, true);
+    proxyCaches.delete(ep);
 }
 function createProxy(ep, path = [], target = function () { }) {
-    const cachedProxy = proxyCache.get(path.join(","));
-    if (cachedProxy) {
-        return cachedProxy;
+    let proxyCache = proxyCaches.get(ep);
+    if (proxyCache) {
+        const cachedProxy = proxyCache.get(path.join(","));
+        if (cachedProxy) {
+            return cachedProxy;
+        }
+    }
+    else {
+        proxyCache = new Map();
+        proxyCaches.set(ep, proxyCache);
     }
     let isProxyReleased = false;
     const proxy = new Proxy(target, {
