@@ -544,14 +544,20 @@ function unregisterProxy(proxy: object) {
   proxyFinalizers?.unregister(proxy);
 }
 
-const proxyCache = new Map<string, Proxy>();
+const proxyCaches = new Map<Endpoint, Map<string, Proxy>>();
 
 export async function teardown(ep: Endpoint): Promise<void> {
+  const proxyCache = proxyCaches.get(ep);
+  if (!proxyCache) {
+    return;
+  }
+
   for (const proxy of proxyCache) {
     unregisterProxy(proxy);
   }
   proxyCache.clear();
   await releaseEndpoint(ep, true);
+  proxyCaches.delete(ep);
 }
 
 function createProxy<T>(
@@ -559,9 +565,15 @@ function createProxy<T>(
   path: PropertyKey[] = [],
   target: object = function () {}
 ): Remote<T> {
-  const cachedProxy = proxyCache.get(path.join(","));
-  if (cachedProxy) {
-    return cachedProxy as any;
+  let proxyCache = proxyCaches.get(ep);
+  if (proxyCache) {
+    const cachedProxy = proxyCache.get(path.join(","));
+    if (cachedProxy) {
+      return cachedProxy as any;
+    }
+  } else {
+    proxyCache = new Map<string, Proxy>();
+    proxyCaches.set(ep, proxyCache);
   }
 
   let isProxyReleased: boolean | string | Error = false;
