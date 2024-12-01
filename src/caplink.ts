@@ -556,8 +556,8 @@ export async function teardown(ep: Endpoint): Promise<void> {
     unregisterProxy(proxy);
   }
   proxyCache.clear();
-  await releaseEndpoint(ep, true);
   proxyCaches.delete(ep);
+  await releaseEndpoint(ep, true);
 }
 
 function createProxy<T>(
